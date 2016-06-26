@@ -41,6 +41,7 @@ public:
 		// ${m.summary}
 		if (request().request_method() == "${m.name}") {
 {% for p in m.parameters %}\
+			// ${p.name}: ${p.description}
 			${p.retrieve}
 {% end %}\
 			std::cout << "DEBUG: ${m.name} " << request().path_info()
