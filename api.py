@@ -29,8 +29,11 @@ class API:
 			self.api = yaml.load(yamlfile)
 		
 		self.paths = tuple(
-			self.Path(self, uri, yaml)
-				for uri, yaml in self.api.get('paths', {}).iteritems()
+			sorted(
+				(self.Path(self, uri, yaml)
+					for uri, yaml in self.api.get('paths', {}).iteritems()),
+				key = lambda path: path.uri # UGLY! curly braces '{' '}' are heavier than letters in ascii 
+			)
 		)
 		
 		self.definitions = {
@@ -49,7 +52,7 @@ class API:
 				uriParam = '{%s}' % parameter.name
 				pattern = '([^/]+)' # param['type'] == 'string' or unkonwn
 				if parameter.yaml.get('type') == 'integer':
-					pattern = '(\\\\d+)'
+					pattern = r'(\\d+)'
 					
 				if uriParam in path.uri:
 					uriRe = uriRe.replace(uriParam, pattern)
