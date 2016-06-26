@@ -9,14 +9,17 @@ ${api.description}
 
 #include <cppcms/url_mapper.h>
 #include <cppcms/url_dispatcher.h>
+
 #include <iostream>
+#include <cstdint>
+
 #include <boost/variant.hpp>
 #include <boost/algorithm/string.hpp>
 
 namespace cwapper {
 	typedef std::vector<std::string> stringarray;
-	typedef boost::variant<std::string, stringarray> qsparam;
-	typedef std::map<std::string, qsparam> qstring;
+	typedef boost::variant<std::string, stringarray> parameter;
+	typedef std::map<std::string, parameter> qstring;
 }
 
 std::ostream& operator<<(std::ostream& out, const std::vector<std::string>& v) {
@@ -35,7 +38,16 @@ public:
 	}
 {% for r in api.routes %}\
 	void ${r.fid}(${r.signature}) {
-		cwapper::qstring query = this->query();
+		CORS();
+		
+		if (request().request_method() == "OPTIONS") {
+			return;
+		}
+		if (request().http_accept() != "application/json") {
+			response().make_error_response(response().not_implemented);
+			return;
+		}
+			
 {% for m in r.path.methods %}\
 		
 		// ${m.summary}
@@ -53,8 +65,7 @@ public:
 {% end %}\
 			<< std::endl;
 			
-			${m.operationId}(${m.call});
-
+			response().out() << ${m.operationId}(${m.call});
 			return;
 		}
 {% end %}\
@@ -64,7 +75,11 @@ public:
 		
 {% for r in api.routes %}\
 {% for m in r.path.methods %}\
-	virtual void ${m.operationId}(${m.signature}) {}
+	virtual cppcms::json::value ${m.operationId}(${m.signature}) {
+		cppcms::json::null null;
+		
+		return cppcms::json::value(null);
+	}
 {% end %}\
 {% end %}\
 
@@ -80,38 +95,46 @@ private:
 		}
 		return rawbody;
 	}
-	
-	cwapper::qstring query() {
-		std::istringstream iss(request().query_string());
-		cwapper::qstring params;
+		
+	cwapper::parameter parameter(std::string name) {
+		cppcms::http::request::form_type form = request().post_or_get();
+		cwapper::parameter result;
 
-		std::string keyval, key, val;
+		for(cppcms::http::request::form_type::iterator it = form.begin(); it != form.end(); it++) {
+			std::string key = it->first, value = it->second;
 
-		while(std::getline(iss, keyval, '&'))
-		{
-			std::istringstream iss(keyval);
+			if(key != name)
+				continue;
 
-			if(std::getline(std::getline(iss, key, '='), val)) {
-				boost::algorithm::trim(key);
-				boost::algorithm::trim(val);
-				
-				if(boost::algorithm::ends_with(key, "[]")) {
-					boost::algorithm::trim_right_if(key, boost::algorithm::is_any_of("[]"));
-					try {
-						cwapper::stringarray &array =
-							boost::get<cwapper::stringarray>(params[key]);
-						array.push_back(val);
-					} catch(boost::bad_get e) {
-						cwapper::stringarray init(1, val);
-						params[key] = init;
-					}
-				} else {
-					params[key] = val;
-				}
+			try {
+				cwapper::stringarray& array = boost::get<cwapper::stringarray>(result);
+				array.push_back(value);
+				continue;
+			} catch(boost::bad_get e) {}
+
+			std::string& old = boost::get<std::string>(result);
+			if(old.empty()) {
+				result = value;
+			} else {
+				cwapper::stringarray array;
+				array.push_back(old);
+				array.push_back(value);
+				result = array;
 			}
 		}
-		
-		return params;
+
+		return result;
+	}
+	
+	void CORS() {
+		response().set_header("Content-Type",
+			request().http_accept());
+			
+		response().set_header("Access-Control-Allow-Origin", "*");
+		response().set_header("Access-Control-Allow-Headers",
+			request().getenv("HTTP_ACCESS_CONTROL_REQUEST_HEADERS"));
+		response().set_header("Access-Control-Allow-Methods",
+			request().getenv("HTTP_ACCESS_CONTROL_REQUEST_METHOD"));
 	}
 };
 

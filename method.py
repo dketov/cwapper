@@ -11,6 +11,8 @@ class Method:
 			self.Parameter(self, parameter['name'], parameter)
 				for parameter in self.yaml.get('parameters', {})
 		)
+		if 'application/json' not in self.produces:
+			print >> sys.stderr, "WARNING: %s %s does not produce ONLY supported 'applcation/json'" % (self.name, self.path.uri)
 	
 	def __repr__(self):
 		return "%s: %s" % (self.__class__.__name__, self.name)

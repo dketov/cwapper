@@ -42,15 +42,26 @@ class Parameter:
 
 	@property
 	def retrieve(self):
-		if self.iN('path') and self.ctype != 'std::string':
+		if self.iN('path') and self.type == 'integer':
 			return '%s = atoi(%s.c_str());' % (self.declaration, self.name);
 
-		if self.iN('query'):
-			return '%s = boost::get<%s>(query["%s"]);' % (self.declaration, self.ctype, self.name)
+		if self.iN('header'):
+			return '%s = request().getenv("HTTP_%s");' % (
+				self.declaration,
+				self.name.upper()
+			);
 
-		if self.iN('formData') or self.iN('header'):
-			return '%s = request().getenv("HTTP_%s");' % (self.declaration, self.name.upper());
-
+		if self.iN('query') or self.iN('formData'):
+			name = self.name
+			if self.isArray:
+				name += "[]"
+				
+			return '%s = boost::get<%s >(this->parameter("%s"));' % (
+				self.declaration,
+				self.ctype,
+				name
+			);
+			
 		if self.iN('body'):
 			if self.isArray:
 				return '%s = this->body().array();' % self.declaration
@@ -69,10 +80,10 @@ class Parameter:
 	def ctype(self):
 		if self.type:
 			return { 
-				'array': 'cwapper::stringarray',
-				'integer': 'int',
-				'string': 'std::string',
-			}.get(self.type)
+				'array': { None: 'cwapper::stringarray'},
+				'integer': { None: 'int', 'int64': 'std::int64_t' },
+				'string': { None: 'std::string' },
+			}.get(self.type).get(self.format)
 
 		if '$ref' in self.yaml['schema']:
 			return 'cppcms::json::value'
