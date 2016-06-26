@@ -20,51 +20,50 @@ namespace cwapper {
 }
 
 std::ostream& operator<<(std::ostream& out, const std::vector<std::string>& v) {
-  if (!v.empty()) {
-    std::copy(v.begin(), v.end(), std::ostream_iterator<std::string>(out, ", "));
-  }
-  return out;
+	if (!v.empty()) {
+		std::copy(v.begin(), v.end(), std::ostream_iterator<std::string>(out, ", "));
+	}
+	return out;
 }
 
 class restful: public cppcms::application {
 public:
 	restful(cppcms::service &srv): cppcms::application(srv) {
-		{% for r in api.routes %}
-			dispatcher().assign("${r.re}", &restful::${r.fid}, this${r.args});
-		{% end %}
+{% for r in api.routes %}\
+		dispatcher().assign("${r.re}", &restful::${r.fid}, this${r.args});
+{% end %}\
 	}
-	{% for r in api.routes %}
-		void ${r.fid}(${r.signature}) {
-			cwapper::qstring query = this->query();
-			{% for m in r.path.methods %}
-				// ${m.summary}
-				
-				if (request().request_method() == "${m.name}") {
-					${m.work}
-					{% for p in m.parameters %}
-						${p.retrieve}
-					{% end %}
-
-					${m.operationId}(${m.call});
-					
-					std::cout << "DEBUG: ${m.name} " << request().path_info()
-					{% for p in m.parameters %}
-						<< std::endl << "\\t${p.name}=" << ${p.surname}
-					{% end %}
-					<< std::endl;
-					return;
-				}
-			{% end %}
-			response().make_error_response(response().not_implemented);
-		}
-	{% end %}
+{% for r in api.routes %}\
+	void ${r.fid}(${r.signature}) {
+		cwapper::qstring query = this->query();
+{% for m in r.path.methods %}\
 		
-	{% for r in api.routes %}
-		{% for m in r.path.methods %}
-			virtual void ${m.operationId}(${m.signature}) {}
-		{% end %}
-	{% end %}
-	
+		// ${m.summary}
+		if (request().request_method() == "${m.name}") {
+{% for p in m.parameters %}\
+			${p.retrieve}
+{% end %}\
+			std::cout << "DEBUG: ${m.name} " << request().path_info()
+{% for p in m.parameters %}\
+				<< std::endl << "\\t${p.name}=" << ${p.surname}
+{% end %}\
+			<< std::endl;
+			
+			${m.operationId}(${m.call});
+
+			return;
+		}
+{% end %}\
+		response().make_error_response(response().not_implemented);
+	}
+{% end %}\
+		
+{% for r in api.routes %}\
+{% for m in r.path.methods %}\
+	virtual void ${m.operationId}(${m.signature}) {}
+{% end %}\
+{% end %}\
+
 private:
 	cppcms::json::value body() {
 		std::pair<void*, ssize_t> post = request().raw_post_data();

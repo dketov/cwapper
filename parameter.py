@@ -43,19 +43,19 @@ class Parameter:
 	@property
 	def retrieve(self):
 		if self.iN('path') and self.ctype != 'std::string':
-			return '\n\t\t\t%s = atoi(%s.c_str());' % (self.declaration, self.name);
+			return '%s = atoi(%s.c_str());' % (self.declaration, self.name);
 
 		if self.iN('query'):
 			return '%s = boost::get<%s>(query["%s"]);' % (self.declaration, self.ctype, self.name)
 
 		if self.iN('formData') or self.iN('header'):
-			return '\n\t\t\t%s;' % self.declaration
+			return '%s = request().getenv("HTTP_%s");' % (self.declaration, self.name.upper());
 
 		if self.iN('body'):
 			if self.isArray:
-				return '\n\t\t\t%s = this->body().array();' % self.declaration
+				return '%s = this->body().array();' % self.declaration
 			else:
-				return '\n\t\t\t%s = this->body();' % self.declaration
+				return '%s = this->body();' % self.declaration
 
 	@property
 	def isArray(self):
