@@ -39,6 +39,9 @@ public:
 {% for m in r.path.methods %}\
 		
 		// ${m.summary}
+{% if m.description %}\
+		// ${m.description}
+{% end %}\
 		if (request().request_method() == "${m.name}") {
 {% for p in m.parameters %}\
 			// ${p.name}: ${p.description}
