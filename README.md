@@ -12,7 +12,7 @@ cppcms restful api server code generator from swagger.yaml
 2. Clone this repo and compile the test server
 
    ```sh
-   git clone https://github.com/dketov/cwapper.git
+   git clone https://github.com/dketov/cwapper.git && cd cwapper
    mkdir __build__ && cd __build__
    cmake ../tests/petshop
    ```
