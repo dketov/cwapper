@@ -1,7 +1,10 @@
 # CwaPPer
 cppcms restful api server code generator from swagger.yaml
 
-0. Install cmake, make, g++
+0. Install dependencies 
+   
+   * Install cmake, make, g++
+   * Install genshi (https://genshi.edgewall.org/), pyyaml (http://pyyaml.org/)
 
 1. Install cppcms
    
