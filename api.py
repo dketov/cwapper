@@ -1,5 +1,5 @@
 # -*- encoding: utf-8 -*-
-import yaml
+import yaml, json
 
 class Route():
 	def __init__(self, path, params, re, fid):
@@ -24,6 +24,13 @@ class API:
 	def description(self):
 		return self.api.get('info', {}).get('description', '')
 
+	@property
+	def __json__(self):
+		return json.dumps(self.api).replace('"', r'\"').replace(r'\n', r'\\n');
+	@property
+	def __yaml__(self):
+		return yaml.dump(self.api).replace('"', r'\"').replace('\n', r'\n');
+			
 	def __init__(self, filename):
 		with open(filename) as yamlfile:
 			self.api = yaml.load(yamlfile)

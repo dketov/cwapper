@@ -35,6 +35,7 @@ public:
 {% for r in api.routes %}\
 		dispatcher().assign("${r.re}", &restful::${r.fid}, this${r.args});
 {% end %}\
+		dispatcher().assign("/__api__", &restful::__api__, this);
 	}
 {% for r in api.routes %}\
 	void ${r.fid}(${r.signature}) {
@@ -135,6 +136,20 @@ private:
 			request().getenv("HTTP_ACCESS_CONTROL_REQUEST_HEADERS"));
 		response().set_header("Access-Control-Allow-Methods",
 			request().getenv("HTTP_ACCESS_CONTROL_REQUEST_METHOD"));
+	}
+	
+	void __api__() {
+		CORS();
+		std::string accept = request().http_accept();
+		
+		if(boost::algorithm::contains(accept, "text/yaml")) {
+			response().set_header("Content-Type", "text/yaml");
+			response().out() << "${api.__yaml__}";
+			return;
+		}
+
+		response().set_header("Content-Type", "application/json");
+		response().out() << "${api.__json__}";
 	}
 };
 
