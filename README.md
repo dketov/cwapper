@@ -18,14 +18,18 @@ cppcms restful api server code generator from swagger.yaml
    git clone https://github.com/dketov/cwapper.git && cd cwapper
    mkdir __build__ && cd __build__
    cmake ../tests/petshop
+   make
    ```
   
 3. Run the test server
    ```sh
-   ./api -c ../tests/petshop/config.js
+   ./api.sh
    ```
   
 4. Try swagger-editor against running server
    * Open http://editor.swagger.io/#/ in browser
    * File/Import file ../tests/petshop/api.yaml
-   * Explore!
+   Or try built-in swagger-ui
+   * Open http://localhost:8080 in browser
+   
+   Explore!
