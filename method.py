@@ -27,3 +27,10 @@ class Method:
 	@property
 	def call(self):
 		return ', '.join(p.surname for p in self.parameters)
+
+	@property
+	def bodyparam(self):
+		try:
+			return next(p for p in self.parameters if p.iN('body'))
+		except StopIteration:
+			pass
