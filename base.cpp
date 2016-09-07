@@ -1,44 +1,9 @@
 /*
 ${api.description}
 */
-#include <cppcms/application.h>
-#include <cppcms/applications_pool.h>
-#include <cppcms/service.h>
-#include <cppcms/http_response.h>
-#include <cppcms/http_request.h>
 
-#include <cppcms/url_mapper.h>
-#include <cppcms/url_dispatcher.h>
-
-#include <iostream>
-#include <cstdint>
-
-#include <boost/variant.hpp>
-#include <boost/algorithm/string.hpp>
-
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/property_tree/xml_parser.hpp>
-#include <boost/property_tree/exceptions.hpp>
-
-namespace cwapper {
-	typedef std::vector<std::string> stringarray;
-	typedef boost::variant<std::string, stringarray> parameter;
-	typedef std::map<std::string, parameter> qstring;
-
-	enum contentType { JSON, XML };
-	std::string contentTypes[] = { "application/json", "text/xml" };
-	
-	struct data {
-		contentType type;
-		boost::property_tree::ptree tree;
-
-		data(contentType value = JSON) { type = value; };
-		std::string mimeType() { return cwapper::contentTypes[this->type]; }; 
-	};
-	
-	class error: std::exception {};
-}
+#include "cwapper.hpp"
+#include "restful.hpp"
 
 std::ostream& operator<<(std::ostream& out, const std::vector<std::string>& v) {
 	if (!v.empty()) {
@@ -54,20 +19,27 @@ std::ostream& operator<<(std::ostream& out, const cwapper::data& v) {
 	if(v.type == cwapper::XML) {
 		boost::property_tree::xml_parser::write_xml(out, v.tree);
 	}
-	
 	return out;
 }
 
-class restful: public cppcms::application {
-public:
-	restful(cppcms::service &srv): cppcms::application(srv) {
+cppcms::http::response& operator<<(cppcms::http::response& r, const cwapper::data& v) {
+	r.set_header("Content-Type", v.mimeType());
+
+	r.out() << v;
+	
+	return r;
+}
+
+namespace cwapper {
+	restful::restful(cppcms::service &srv): cppcms::application(srv) {
 {% for r in api.routes %}\
 		dispatcher().assign("${r.re}", &restful::${r.fid}, this${r.args});
 {% end %}\
 		dispatcher().assign("/__api__", &restful::__api__, this);
 	}
+	
 {% for r in api.routes %}\
-	void ${r.fid}(${r.signature}) {
+	void restful::${r.fid}(${r.signature}) {
 		CORS();
 		
 		if (request().request_method() == "OPTIONS") {
@@ -92,10 +64,7 @@ public:
 {% end %}\
 			<< std::endl;
 			
-			cwapper::data result = ${m.operationId}(${m.call});
-			
-			response().set_header("Content-Type", result.mimeType());
-			response().out() << result;
+			response() << ${m.operationId}(${m.call});
 			return;
 		}
 {% end %}\
@@ -107,21 +76,20 @@ public:
 		
 {% for r in api.routes %}\
 {% for m in r.path.methods %}\
-	virtual cwapper::data ${m.operationId}(${m.signature}) {
+	cwapper::data restful::${m.operationId}(${m.signature}) {
 {% choose %}\
- {% when m.bodyparam %}\
+{% when m.bodyparam %}\
 		return ${m.bodyparam.name};
- {% end %}\
- {% otherwise %}\
-		return cwapper::data();
- {% end %}\
 {% end %}\
-	}
+{% otherwise %}\
+		return cwapper::data();
+{% end %}\
+{% end %}\
+}
 {% end %}\
 {% end %}\
 
-private:
-	cwapper::data body() {
+	cwapper::data restful::body() {
 		std::pair<void*, ssize_t> post = request().raw_post_data();
 		std::istringstream ss(std::string((char *)post.first, post.second));
 
@@ -153,7 +121,7 @@ private:
 		return data;
 	}
 		
-	cwapper::parameter parameter(std::string name) {
+	cwapper::parameter restful::parameter(std::string name) {
 		cppcms::http::request::form_type form = request().post_or_get();
 		cwapper::parameter result;
 
@@ -183,7 +151,7 @@ private:
 		return result;
 	}
 	
-	void CORS() {
+	void restful::CORS() {
 		response().set_header("Content-Type",
 			request().http_accept());
 			
@@ -194,7 +162,7 @@ private:
 			request().getenv("HTTP_ACCESS_CONTROL_REQUEST_METHOD"));
 	}
 	
-	void __api__() {
+	void restful::__api__() {
 		CORS();
 		std::string accept = request().http_accept();
 		
@@ -206,15 +174,5 @@ private:
 
 		response().set_header("Content-Type", "application/json");
 		response().out() << "${api.__json__}";
-	}
-};
-
-int main(int argc,char ** argv) {
-	try {
-		cppcms::service srv(argc,argv);
-		srv.applications_pool().mount(cppcms::applications_factory<restful>());
-		srv.run();
-	} catch(std::exception const &e) {
-		std::cerr << e.what() << std::endl;
 	}
 }

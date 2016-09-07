@@ -7,14 +7,14 @@ find_library(LIB_CPPCMS cppcms)
 set(CMAKE_CXX_FLAGS -std=c++11)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable(api api.cpp)
-add_dependencies(api swagger-ui)
+add_executable(api base.cpp service.cpp)
+add_dependencies(api ui)
 
 target_link_libraries(api cppcms booster)
 
 add_custom_command(
-	OUTPUT api.cpp
-	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../cwapper.py ${CMAKE_CURRENT_SOURCE_DIR}/api.yaml > api.cpp
+	OUTPUT base.cpp service.cpp
+	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../cwapper.py ${CMAKE_CURRENT_SOURCE_DIR}/api.yaml
 )
 
 add_custom_command(
@@ -25,10 +25,10 @@ add_custom_command(
 add_custom_command(
 	OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/swagger-ui
 	DEPENDS master.zip
-	COMMAND 7z x -y master.zip
+	COMMAND 7z x -y master.zip swagger-ui-master/dist
 	COMMAND mv -n swagger-ui-master/dist ${CMAKE_CURRENT_SOURCE_DIR}/swagger-ui
 )
 
-add_custom_target(swagger-ui
+add_custom_target(ui
 	DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/swagger-ui
 )
